@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Última hora: cumpleaños de papá</title>
+<style>
+  :root {
+    --navy: #0f1f3d;
+    --navy-light: #1d3563;
+    --cream: #f6efdc;
+    --cream-dark: #e9dfc2;
+    --gold: #c9a227;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: var(--navy);
+    color: var(--navy);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  .paper {
+    width: 100%;
+    max-width: 480px;
+    background: var(--cream);
+    border: 4px double var(--navy);
+    outline: 3px solid var(--gold);
+    outline-offset: 4px;
+    border-radius: 6px;
+    padding: 20px 20px 24px;
+    text-align: center;
+  }
+
+  .masthead { margin: 0; font-size: 1.1rem; font-weight: bold; letter-spacing: 0.12em; text-transform: uppercase; }
+  .edition { margin: 4px 0 0; font-size: 0.8rem; font-style: italic; }
+  .line { border: 0; border-top: 3px double var(--navy); margin: 12px 0 20px; }
+
+  .screen { animation: fadeIn 0.4s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: 2.4rem; line-height: 1.05; margin: 0 0 12px; text-transform: uppercase; }
+  h2 { font-size: 1.5rem; margin: 0 0 12px; }
+  p { font-size: 1.1rem; line-height: 1.5; margin: 0 0 20px; }
+  #finalMessage { white-space: pre-line; text-align: left; }
+
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .buttons.column { flex-direction: column; align-items: center; }
+  button {
+    min-height: 48px;
+    padding: 12px 22px;
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    background: var(--navy);
+    color: var(--cream);
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    max-width: 100%;
+  }
+  button:hover { background: var(--navy-light); }
+  button.secondary { background: transparent; color: var(--navy); border-color: var(--navy); }
+  button.secondary:hover { background: var(--cream-dark); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  /* prizes */
+  #awards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .award { background: var(--cream-dark); color: var(--navy); border-color: var(--navy); }
+  .award:hover { background: #ddd0a8; }
+  .award.selected { background: var(--gold); }
+  #awardBox { background: var(--cream-dark); border-left: 4px solid var(--gold); padding: 12px 14px; margin-bottom: 20px; text-align: left; }
+  #awardBox p { margin: 0; font-size: 1rem; }
+
+  /* confetti */
+  #confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .piece { position: absolute; top: -20px; width: 8px; height: 12px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translate(var(--drift), 105vh) rotate(720deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+    #confetti { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="paper">
+  <p class="masthead">El Periódico Familiar</p>
+  <p class="edition">Edición especial · <span id="dateLine"></span></p>
+  <hr class="line">
+
+  <!-- Screen 1: Verify Identity -->
+  <section class="screen" data-step="1">
+    <h2>Verificación de identidad</h2>
+    <p>Hola, ¿tú eres mi <span class="dad">papá</span>?</p>
+    <div class="buttons" id="idButtons">
+      <button onclick="showScreen(2)">Sí, soy yo</button>
+      <button class="secondary" onclick="denyAccess()">No</button>
+    </div>
+    <div id="denied" hidden>
+      <p>Acceso denegado. Este periódico es exclusivamente para mi <span class="dad">papá</span>.</p>
+      <button onclick="retryAccess()">Intentar otra vez</button>
+    </div>
+  </section>
+
+  <!-- Screen 2: Am I the favorite child? -->
+  <section class="screen" data-step="2" hidden>
+    <h2 id="favoriteQuestion"></h2>
+    <div class="buttons column" id="favButtons">
+      <button id="favYes" onclick="answerFavoriteYes()">Sí</button>
+      <button id="favNo" class="secondary" onclick="answerFavoriteNo()">No</button>
+    </div>
+    <p id="favHint"></p>
+    <div id="thanks" hidden>
+      <p>Gracias por confirmar lo que ya sabíamos.</p>
+      <button onclick="showScreen(3)">Continuar</button>
+    </div>
+  </section>
+
+  <!-- Screen 3: Title of the news -->
+  <section class="screen" data-step="3" hidden>
+    <h1>¡Última hora!</h1>
+    <p id="subtitle"></p>
+    <button onclick="showScreen(4)">Ver la noticia</button>
+  </section>
+
+  <!-- Screen 4: News content -->
+  <section class="screen" data-step="4" hidden>
+    <h2>Informe oficial</h2>
+    <p id="reportText"></p>
+    <button onclick="showScreen(5)">Continuar</button>
+  </section>
+
+  <!-- Screen 5: The Prizes -->
+  <section class="screen" data-step="5" hidden>
+    <h2>Los premios a <span class="dad"></span></h2>
+    <p>Toca un premio para ver por qué se lo merece.</p>
+    <div id="awards"></div>
+    <div id="awardBox" hidden>
+      <p id="awardText"></p>
+    </div>
+    <button onclick="showScreen(6)">Continuar</button>
+  </section>
+
+  <!-- Screen 6: Happy Birthday -->
+  <section class="screen" data-step="6" hidden>
+    <h2>¡Feliz cumpleaños, <span class="dad"></span>!</h2>
+    <p id="finalMessage"></p>
+    <button class="secondary" onclick="location.reload()">Volver a empezar</button>
+  </section>
+</div>
+
+<div id="confetti"></div>
+
+<script>
+  // Can be changed for other birthdays 
+  const DAD = "papá";
+  const BIRTHDAY_MONTH = 11;   // 1 (Jan) to 12 (Dec)
+  const BIRTHDAY_DAY = 2;
+
+  // The months are in Spanish but can be changed to other languages
+  const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                  "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+  const BIRTHDAY_TEXT = BIRTHDAY_DAY + " de " + MONTHS[BIRTHDAY_MONTH - 1];
+
+  const FAVORITE_QUESTION = "¿Soy la favorita entre tus hijos?";
+  const SUBTITLE = `¡Hoy cumple años ${DAD}!`;
+  const REPORT = `Fuentes cercanas a la familia confirman que hoy, ${BIRTHDAY_TEXT}, está de cumpleaños uno de los personajes más importantes de nuestras vidas.`;
+
+  // Title of prizes and their text/description
+  const AWARDS = [
+    { title: "Premio al mejor papá", text: "No hubo votación, pero tampoco hacía falta." },
+    { title: "Premio a los mejores consejos", text: "Casi siempre tiene razón ❤️" },
+    { title: "Premio al más trabajador", text: "Trabaja tanto que a veces hay que recordarle que descanse. Gracias por todo el esfuerzo." },
+    { title: "Premio a los mejores chistes", text: "Tiene los mejores dad jokes..." }
+  ];
+
+  const FINAL_MESSAGE = `Después de una investigación exhaustiva, este periódico confirma que hoy es el cumpleaños de un ${DAD} increíble.
+
+¡Feliz cumple! Espero que este nuevo año te traiga mucha salud, felicidad y muchísimas cosas buenas. Gracias por todo lo que haces. ¡Te quiero mucho!`;
+  // ===
+
+  const favHints = ["¿Seguro? Piénsalo bien.", "Error. Intenta otra vez.", "Última oportunidad..."];
+  const confettiColors = ["#c9a227", "#e8d48a", "#f6efdc", "#ffffff", "#2b4a85"];
+  let noClicks = 0;
+
+  const $ = (id) => document.getElementById(id);
+
+  // Show variables on screen
+  document.querySelectorAll(".dad").forEach((el) => { el.textContent = DAD; });
+  $("dateLine").textContent = BIRTHDAY_TEXT;
+  $("favoriteQuestion").textContent = FAVORITE_QUESTION;
+  $("subtitle").textContent = SUBTITLE;
+  $("reportText").textContent = REPORT;
+  $("finalMessage").textContent = FINAL_MESSAGE;
+
+  // Button for each prize
+  AWARDS.forEach((award, index) => {
+    const button = document.createElement("button");
+    button.className = "award";
+    button.textContent = award.title;
+    button.onclick = () => showAward(index, button);
+    $("awards").appendChild(button);
+  });
+
+  function showAward(index, clickedButton) {
+    document.querySelectorAll(".award").forEach((button) => button.classList.remove("selected"));
+    clickedButton.classList.add("selected");
+    $("awardText").textContent = AWARDS[index].text;
+    $("awardBox").hidden = false;
+  }
+
+  function showScreen(step) {
+    document.querySelectorAll(".screen").forEach((screen) => {
+      screen.hidden = Number(screen.dataset.step) !== step;
+    });
+    if (step === 6) launchConfetti();
+  }
+
+  // Screen 1
+  function denyAccess() { $("idButtons").hidden = true; $("denied").hidden = false; }
+  function retryAccess() { $("denied").hidden = true; $("idButtons").hidden = false; }
+
+  // Screen 2: When "No" is clicked, it keeps getting smaller until it disappears and
+  // only the choice "Yes" remains
+  function answerFavoriteYes() {
+    $("favButtons").hidden = true;
+    $("favHint").hidden = true;
+    $("thanks").hidden = false;
+  }
+  function answerFavoriteNo() {
+    noClicks++;
+    if (noClicks >= 4) {
+      $("favNo").hidden = true;
+      $("favHint").textContent = "Esta vez escoge honestamente.";
+      return;
+    }
+    $("favNo").style.transform = "scale(" + (1 - noClicks * 0.2) + ")";
+    $("favYes").style.fontSize = 1 + noClicks * 0.2 + "rem";
+    $("favHint").textContent = favHints[noClicks - 1];
+  }
+
+  function launchConfetti() {
+    for (let i = 0; i < 40; i++) {
+      const piece = document.createElement("div");
+      piece.className = "piece";
+      piece.style.left = Math.random() * 100 + "%";
+      piece.style.background = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+      piece.style.setProperty("--drift", (Math.random() - 0.5) * 120 + "px");
+      piece.style.animationDuration = 2 + Math.random() * 2 + "s";
+      $("confetti").appendChild(piece);
+    }
+    setTimeout(() => { $("confetti").innerHTML = ""; }, 4500);
+  }
+</script>
+</body>
+</html>
